@@ -6,10 +6,9 @@ import WhyBuy from './components/WhyBuy'
 import FestivalSection from './components/FestivalSection'
 import WholesaleRetail from './components/WholesaleRetail'
 import Location from './components/Location'
-import FinalCTA from './components/FinalCTA'
 import Footer from './components/Footer'
-import MobileActionBar from './components/MobileActionBar'
 import useReveal from './utils/useReveal'
+import FarmGallery from './components/FarmGallery'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import CartPage from './components/CartPage'
@@ -24,13 +23,12 @@ function HomePage() {
         <Hero />
         <FlowerSection />
         <FarmStory />
+        <FarmGallery />
         <WhyBuy />
         <FestivalSection />
         <WholesaleRetail />
         <Location />
-        <FinalCTA />
       </main>
-      <MobileActionBar />
     </>
   )
 }

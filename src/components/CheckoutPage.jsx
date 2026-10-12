@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Home, MapPin, Phone, WalletCards } from 'lucide-react'
 import { business } from '../data/business'
@@ -56,6 +56,22 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState(location.state?.paymentMethod || 'pay_at_farm')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [paymentAvailability, setPaymentAvailability] = useState('checking')
+  const [paymentSetupMissing, setPaymentSetupMissing] = useState([])
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/payments/status')
+      .then((response) => response.json())
+      .then((status) => {
+        if (active) {
+          setPaymentAvailability(status.available ? 'available' : 'unavailable')
+          setPaymentSetupMissing(Array.isArray(status.missing) ? status.missing : [])
+        }
+      })
+      .catch(() => { if (active) setPaymentAvailability('unavailable') })
+    return () => { active = false }
+  }, [])
   const items = products.filter(({ id }) => cart[id]).map((product) => ({
     ...product,
     quantity: cart[product.id],
@@ -70,6 +86,7 @@ export default function CheckoutPage() {
     if (!customer.address.trim()) return 'Please enter your address.'
     if (!customer.village.trim()) return 'Please enter your village or city.'
     if (!items.length) return 'Your cart is empty. Add flowers before checkout.'
+    if (paymentMethod === 'pay_now' && paymentAvailability !== 'available') return 'Online payment is not configured yet. Please choose Pay at Farm or contact Manohar Reddy.'
     return ''
   }
 
@@ -91,9 +108,9 @@ export default function CheckoutPage() {
         return
       }
 
-      const { order, keyId } = await postJson('/api/payments/create-order', payload)
       const scriptReady = await loadRazorpay()
       if (!scriptReady) throw new Error('Payment checkout could not load. Please try again or choose Pay at Farm.')
+      const { order, keyId } = await postJson('/api/payments/create-order', payload)
       sessionStorage.setItem(pendingKey, JSON.stringify({ ...payload, orderId: order.orderId }))
       const checkout = new window.Razorpay({
         key: keyId,
@@ -163,14 +180,15 @@ export default function CheckoutPage() {
             <fieldset className="checkout-section payment-options">
               <legend>Payment option</legend>
               <label className={`payment-option ${paymentMethod === 'pay_now' ? 'is-selected' : ''}`}>
-                <input type="radio" name="payment" value="pay_now" checked={paymentMethod === 'pay_now'} onChange={() => setPaymentMethod('pay_now')} />
-                <WalletCards size={22} /><span><strong>Pay Now</strong><small>Secure payment via Razorpay</small></span>
+                <input type="radio" name="payment" value="pay_now" checked={paymentMethod === 'pay_now'} disabled={paymentAvailability !== 'available'} onChange={() => setPaymentMethod('pay_now')} />
+                <WalletCards size={22} /><span><strong>Pay Now</strong><small>{paymentAvailability === 'available' ? 'Secure payment via Razorpay' : paymentAvailability === 'checking' ? 'Checking online payment availability…' : 'Not available yet · payment setup required'}</small></span>
               </label>
               <label className={`payment-option ${paymentMethod === 'pay_at_farm' ? 'is-selected' : ''}`}>
                 <input type="radio" name="payment" value="pay_at_farm" checked={paymentMethod === 'pay_at_farm'} onChange={() => setPaymentMethod('pay_at_farm')} />
                 <Home size={22} /><span><strong>Pay at Farm</strong><small>Payment handled directly at the farm</small></span>
               </label>
             </fieldset>
+            {paymentAvailability === 'unavailable' && <p className="payment-notice" role="status">Online payment setup is incomplete: {paymentSetupMissing.join(', ') || 'server configuration'}. Please choose <strong>Pay at Farm</strong> for now.</p>}
             {error && <p className="form-error" role="alert">{error} <a href={whatsappUrl()} target="_blank" rel="noreferrer">Contact Manohar Reddy</a></p>}
             <button className="btn btn--green checkout-submit" type="submit" disabled={busy}>
               {busy ? 'Please wait…' : paymentMethod === 'pay_now' ? 'Continue to Secure Payment' : 'Place Order · Pay at Farm'}

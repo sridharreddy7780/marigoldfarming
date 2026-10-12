@@ -5,6 +5,7 @@ import createPaymentOrder from './api/payments/create-order.js'
 import verifyPayment from './api/payments/verify.js'
 import failPayment from './api/payments/fail.js'
 import paymentWebhook from './api/payments/webhook.js'
+import paymentStatus from './api/payments/status.js'
 
 const apiHandlers = new Map([
 	['/api/orders/pay-at-farm', payAtFarm],
@@ -12,6 +13,7 @@ const apiHandlers = new Map([
 	['/api/payments/verify', verifyPayment],
 	['/api/payments/fail', failPayment],
 	['/api/payments/webhook', paymentWebhook],
+		['/api/payments/status', paymentStatus],
 ])
 
 function localApiPlugin() {

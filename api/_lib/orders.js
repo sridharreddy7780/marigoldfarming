@@ -201,14 +201,15 @@ export function publicOrder(row) {
 export function getRazorpay() {
   const keyId = process.env.RAZORPAY_KEY_ID
   const keySecret = process.env.RAZORPAY_KEY_SECRET
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
   const mode = process.env.PAYMENT_MODE || 'test'
-  if (!['test', 'live'].includes(mode) || !keyId || !keySecret) {
+  if (!['test', 'live'].includes(mode) || !keyId || !keySecret || !webhookSecret) {
     throw new RequestError(503, 'Online payment is not configured yet. Choose Pay at Farm or contact Manohar Reddy.')
   }
   if (mode === 'live' && (process.env.VERCEL_ENV !== 'production' || !keyId.startsWith('rzp_live_'))) {
     throw new RequestError(503, 'Online payment is not enabled for this environment.')
   }
-  if (mode === 'test' && keyId.startsWith('rzp_live_')) {
+  if (mode === 'test' && !keyId.startsWith('rzp_test_')) {
     throw new RequestError(503, 'Payment mode configuration does not match the gateway key.')
   }
   return { client: new Razorpay({ key_id: keyId, key_secret: keySecret }), keyId, keySecret }
